@@ -50,3 +50,10 @@ export interface GroundingChunk {
     title: string;
   };
 }
+
+export interface UserProfile {
+  name: string;
+  email: string;
+  experience: 'Beginner' | 'Intermediate' | 'Pro';
+  riskTolerance: 'Low' | 'Medium' | 'High';
+}

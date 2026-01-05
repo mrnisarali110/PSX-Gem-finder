@@ -22,6 +22,8 @@ export const analyzeStockWithGemini = async (
     3.  **EXTRACT**: Get EPS, Revenue, and Dividend data for the last 5 years up to present day.
     4.  **ANALYZE**: Apply the "Gem" methodology defined in system instructions.
     
+    **IMPORTANT**: Keep the "markdownReport" concise and focused on key insights to ensure valid JSON output.
+    
     Output must be valid JSON matching the provided schema.
     `;
 
@@ -33,8 +35,11 @@ export const analyzeStockWithGemini = async (
       config: {
         systemInstruction: GEM_SYSTEM_INSTRUCTION,
         tools: [{ googleSearch: {} }],
+        // Explicitly set a high output limit to prevent JSON truncation
+        maxOutputTokens: 65536,
         thinkingConfig: {
-          thinkingBudget: 32768, 
+          // Reduce budget slightly to leave ample room for the generation
+          thinkingBudget: 10000, 
         },
         responseMimeType: "application/json",
         responseSchema: {
@@ -42,7 +47,7 @@ export const analyzeStockWithGemini = async (
           properties: {
             verdict: { type: Type.STRING, enum: ["GEM", "WATCH", "TRAP", "UNKNOWN"] },
             confidence: { type: Type.NUMBER, description: "Confidence score 0-100" },
-            markdownReport: { type: Type.STRING, description: "The full detailed markdown analysis report." },
+            markdownReport: { type: Type.STRING, description: "The detailed markdown analysis report." },
             financialData: {
               type: Type.ARRAY,
               description: "Historical financial data extracted or estimated from reports",
@@ -61,8 +66,30 @@ export const analyzeStockWithGemini = async (
       }
     });
 
-    // Parse the JSON response
-    const jsonResponse = JSON.parse(response.text || "{}");
+    // Parse the JSON response with error handling
+    let jsonResponse;
+    try {
+      jsonResponse = JSON.parse(response.text || "{}");
+    } catch (parseError) {
+      console.warn("Initial JSON parse failed, attempting cleanup:", parseError);
+      // Attempt to clean markdown code blocks if present
+      const cleanedText = response.text?.replace(/```json\n?|```/g, '').trim() || "{}";
+      try {
+        jsonResponse = JSON.parse(cleanedText);
+      } catch (finalError) {
+        console.error("Gemini Analysis JSON Parse Error:", finalError);
+        console.log("Raw Text:", response.text);
+        
+        // Return a graceful failure object instead of crashing
+        return {
+           markdown: "### Analysis Error\n\nThe AI successfully analyzed the data but the response format was incomplete (Token Limit Exceeded). \n\n**Please try analyzing the stock again.**",
+           verdict: "UNKNOWN",
+           confidence: 0,
+           financialData: [],
+           companyName: stock.symbol
+        };
+      }
+    }
 
     return {
       markdown: jsonResponse.markdownReport || "Analysis failed to generate text.",
@@ -74,7 +101,14 @@ export const analyzeStockWithGemini = async (
 
   } catch (error) {
     console.error("Gemini Analysis Error:", error);
-    throw error;
+    // Return a structured error result so the UI handles it gracefully
+    return {
+        markdown: "### Connection or API Error\n\nUnable to complete analysis at this time. Please check your internet connection or API quota.",
+        verdict: "UNKNOWN",
+        confidence: 0,
+        financialData: [],
+        companyName: stock.symbol
+    };
   }
 };
 

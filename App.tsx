@@ -4,8 +4,9 @@ import AnalysisView from './components/AnalysisView';
 import WatchlistView from './components/WatchlistView';
 import LoadingOverlay from './components/LoadingOverlay';
 import RecentSearches from './components/RecentSearches';
+import ProfileModal from './components/ProfileModal';
 import { Logo } from './components/Logo';
-import { Stock, AnalysisResult, AnalysisStatus, WatchlistItem, RecentSearch } from './types';
+import { Stock, AnalysisResult, AnalysisStatus, WatchlistItem, RecentSearch, UserProfile } from './types';
 import { analyzeStockWithGemini, getMarketPulse } from './services/geminiService';
 import { MOCK_PSX_STOCKS } from './constants';
 
@@ -14,6 +15,15 @@ const App: React.FC = () => {
   
   // Theme State
   const [darkMode, setDarkMode] = useState(true);
+  
+  // Profile State
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserProfile>({
+    name: '',
+    email: '',
+    experience: 'Beginner',
+    riskTolerance: 'Medium'
+  });
 
   // Search State
   const [selectedStock, setSelectedStock] = useState<Stock | null>(null);
@@ -66,6 +76,10 @@ const App: React.FC = () => {
     if (savedHistory) {
       try { setRecentSearches(JSON.parse(savedHistory)); } catch (e) { console.error(e); }
     }
+    const savedProfile = localStorage.getItem('gem_finder_profile');
+    if (savedProfile) {
+        try { setUserProfile(JSON.parse(savedProfile)); } catch (e) { console.error(e); }
+    }
   }, []);
 
   useEffect(() => {
@@ -75,6 +89,10 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('gem_finder_history', JSON.stringify(recentSearches));
   }, [recentSearches]);
+
+  useEffect(() => {
+    localStorage.setItem('gem_finder_profile', JSON.stringify(userProfile));
+  }, [userProfile]);
 
   useEffect(() => {
     if (status === AnalysisStatus.COMPLETED) {
@@ -191,6 +209,13 @@ const App: React.FC = () => {
   return (
     <div className={`min-h-screen flex flex-col transition-colors duration-300 font-sans ${darkMode ? 'bg-slate-900 text-slate-100' : 'bg-slate-50 text-gray-900'}`}>
       
+      <ProfileModal 
+        isOpen={isProfileOpen} 
+        onClose={() => setIsProfileOpen(false)} 
+        userProfile={userProfile}
+        onSave={setUserProfile}
+      />
+
       {/* Background decoration */}
       <div className={`absolute inset-0 bg-[url('https://images.unsplash.com/photo-1611974765270-ca12586343bb?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center bg-fixed bg-no-repeat pointer-events-none z-0 ${darkMode ? 'opacity-5' : 'opacity-[0.03]'}`}></div>
 
@@ -259,17 +284,28 @@ const App: React.FC = () => {
               </button>
             </nav>
 
-            <button 
-              onClick={() => setDarkMode(!darkMode)}
-              className="p-2 md:p-2.5 rounded-full bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors shadow-sm"
-              title="Toggle Theme"
-            >
-              {darkMode ? (
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-              ) : (
-                <svg className="w-5 h-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
-              )}
-            </button>
+            <div className="flex items-center gap-2">
+                <button 
+                onClick={() => setDarkMode(!darkMode)}
+                className="p-2 md:p-2.5 rounded-full bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors shadow-sm"
+                title="Toggle Theme"
+                >
+                {darkMode ? (
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                ) : (
+                    <svg className="w-5 h-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
+                )}
+                </button>
+                <button
+                    onClick={() => setIsProfileOpen(true)}
+                    className="p-1 rounded-full bg-gradient-to-br from-gem-500 to-gem-700 border-2 border-white dark:border-slate-700 shadow-md hover:scale-105 transition-transform"
+                    title="User Profile"
+                >
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                        {userProfile.name ? userProfile.name.charAt(0).toUpperCase() : <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>}
+                    </div>
+                </button>
+            </div>
           </div>
         </header>
 
@@ -369,8 +405,23 @@ const App: React.FC = () => {
                 )}
 
                 {status === AnalysisStatus.ERROR && (
-                    <div className="mt-6 text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/20 px-6 py-3 rounded-lg border border-red-200 dark:border-red-900/50 animate-bounce font-medium text-sm">
-                        Analysis Failed. Please verify internet connection for live data.
+                    <div className="mt-8 text-center animate-fade-in w-full max-w-2xl mx-auto">
+                        <div className="bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-900/50 p-6 shadow-lg">
+                             <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400 mb-4">
+                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                             </div>
+                             <h3 className="text-lg font-bold text-red-800 dark:text-red-300 mb-2">Analysis Interrupted</h3>
+                             <p className="text-red-700 dark:text-red-400 text-sm mb-6">
+                                We couldn't complete the financial analysis. This is usually due to a network timeout or an issue with the data stream.
+                             </p>
+                             <button 
+                                onClick={handleAnalyze}
+                                className="px-8 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg shadow-md transition-colors flex items-center gap-2 mx-auto"
+                             >
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                                Retry Analysis
+                             </button>
+                        </div>
                     </div>
                 )}
             </div>
