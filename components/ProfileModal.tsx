@@ -54,41 +54,70 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, userProfil
 
         {/* Body */}
         <div className="p-6 space-y-6">
-          <div>
-            <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Display Name</label>
-            <input 
-              type="text" 
-              value={formData.name}
-              onChange={(e) => setFormData({...formData, name: e.target.value})}
-              className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg px-4 py-2.5 text-gray-900 dark:text-white focus:ring-2 focus:ring-gem-500 focus:outline-none transition-all"
-              placeholder="Enter your name"
-            />
+          
+          {/* API Key Section */}
+          <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+             <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                <svg className="w-4 h-4 text-gem-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
+                Google Gemini API Key
+             </label>
+             <input 
+              type="password" 
+              value={formData.apiKey || ''}
+              onChange={(e) => setFormData({...formData, apiKey: e.target.value})}
+              className="w-full bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-600 rounded-lg px-4 py-2.5 text-gray-900 dark:text-white focus:ring-2 focus:ring-gem-500 focus:outline-none transition-all font-mono text-sm mb-2"
+              placeholder="Paste your AIza... key here"
+             />
+             <div className="flex justify-between items-center">
+                 <p className="text-[10px] text-gray-500">Key is stored locally in your browser.</p>
+                 <a 
+                    href="https://aistudio.google.com/app/apikey" 
+                    target="_blank" 
+                    rel="noreferrer"
+                    className="text-[10px] font-bold text-gem-600 hover:text-gem-700 underline"
+                 >
+                    Get a Free Key
+                 </a>
+             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="border-t border-gray-100 dark:border-slate-800 pt-4 space-y-4">
             <div>
-              <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Experience</label>
-              <select 
-                value={formData.experience}
-                onChange={(e) => setFormData({...formData, experience: e.target.value as any})}
-                className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-gray-900 dark:text-white focus:ring-2 focus:ring-gem-500 focus:outline-none text-sm"
-              >
-                <option value="Beginner">Beginner</option>
-                <option value="Intermediate">Intermediate</option>
-                <option value="Pro">Professional</option>
-              </select>
+                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Display Name</label>
+                <input 
+                type="text" 
+                value={formData.name}
+                onChange={(e) => setFormData({...formData, name: e.target.value})}
+                className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg px-4 py-2.5 text-gray-900 dark:text-white focus:ring-2 focus:ring-gem-500 focus:outline-none transition-all"
+                placeholder="Enter your name"
+                />
             </div>
-            <div>
-              <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Risk Tolerance</label>
-              <select 
-                value={formData.riskTolerance}
-                onChange={(e) => setFormData({...formData, riskTolerance: e.target.value as any})}
-                className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-gray-900 dark:text-white focus:ring-2 focus:ring-gem-500 focus:outline-none text-sm"
-              >
-                <option value="Low">Low (Safe)</option>
-                <option value="Medium">Medium</option>
-                <option value="High">High (Aggressive)</option>
-              </select>
+
+            <div className="grid grid-cols-2 gap-4">
+                <div>
+                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Experience</label>
+                <select 
+                    value={formData.experience}
+                    onChange={(e) => setFormData({...formData, experience: e.target.value as any})}
+                    className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-gray-900 dark:text-white focus:ring-2 focus:ring-gem-500 focus:outline-none text-sm"
+                >
+                    <option value="Beginner">Beginner</option>
+                    <option value="Intermediate">Intermediate</option>
+                    <option value="Pro">Professional</option>
+                </select>
+                </div>
+                <div>
+                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Risk Tolerance</label>
+                <select 
+                    value={formData.riskTolerance}
+                    onChange={(e) => setFormData({...formData, riskTolerance: e.target.value as any})}
+                    className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-gray-900 dark:text-white focus:ring-2 focus:ring-gem-500 focus:outline-none text-sm"
+                >
+                    <option value="Low">Low (Safe)</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High (Aggressive)</option>
+                </select>
+                </div>
             </div>
           </div>
           

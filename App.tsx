@@ -23,7 +23,8 @@ const App: React.FC = () => {
     name: '',
     email: '',
     experience: 'Beginner',
-    riskTolerance: 'Medium'
+    riskTolerance: 'Medium',
+    apiKey: ''
   });
 
   // Search State
@@ -130,6 +131,18 @@ const App: React.FC = () => {
     if (!selectedStock) return;
     if (isComparisonMode && !comparisonStock) return;
 
+    // --- CHECK FOR API KEY ---
+    // Note: We check if key is in profile OR if there is an environment key. 
+    // The service handles priority, here we just check if ANY key is available before starting loading UI.
+    const hasEnvKey = process.env.API_KEY && process.env.API_KEY.length > 5;
+    const hasUserKey = userProfile.apiKey && userProfile.apiKey.length > 5;
+
+    if (!hasEnvKey && !hasUserKey) {
+        alert("Please add your FREE Google Gemini API Key in the Profile to continue.");
+        setIsProfileOpen(true);
+        return;
+    }
+
     try {
       setStatus(AnalysisStatus.ANALYZING);
       setIsMinimized(false);
@@ -177,9 +190,15 @@ const App: React.FC = () => {
       setStatus(AnalysisStatus.COMPLETED);
       setView('result');
 
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      setStatus(AnalysisStatus.ERROR);
+      if (error.message === "MISSING_API_KEY") {
+          setStatus(AnalysisStatus.IDLE);
+          setIsProfileOpen(true);
+          alert("API Key is missing or invalid. Please update it in your profile.");
+      } else {
+          setStatus(AnalysisStatus.ERROR);
+      }
     }
   };
 

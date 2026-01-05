@@ -2,13 +2,34 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { Stock, AnalysisResult } from "../types";
 import { GEM_SYSTEM_INSTRUCTION } from "../constants";
 
-// Initialize the client
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Helper to get the authenticated client dynamically
+const getAIClient = () => {
+  // Try to get key from User Profile in Local Storage first
+  let apiKey = process.env.API_KEY;
+  try {
+    const profileStr = localStorage.getItem('gem_finder_profile');
+    if (profileStr) {
+      const profile = JSON.parse(profileStr);
+      if (profile.apiKey && profile.apiKey.length > 5) {
+        apiKey = profile.apiKey;
+      }
+    }
+  } catch (e) {
+    console.warn("Could not read local profile for API key");
+  }
+
+  if (!apiKey) {
+    throw new Error("MISSING_API_KEY");
+  }
+
+  return new GoogleGenAI({ apiKey });
+};
 
 export const analyzeStockWithGemini = async (
   stock: Stock
 ): Promise<AnalysisResult> => {
   try {
+    const ai = getAIClient();
     const today = new Date().toISOString().split('T')[0];
     
     // Handle Custom Search where price might be 0
@@ -118,10 +139,16 @@ export const analyzeStockWithGemini = async (
       companyName: resolvedName
     };
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("Gemini Analysis Error:", error);
+    
+    // Check for Missing Key Error specifically
+    if (error.message === "MISSING_API_KEY") {
+        throw new Error("MISSING_API_KEY");
+    }
+
     return {
-        markdown: "### Connection or API Error\n\nUnable to complete analysis at this time. Please check your internet connection or API quota.",
+        markdown: "### Connection or API Error\n\nUnable to complete analysis at this time. Please check your internet connection, API Key, or API quota.",
         verdict: "UNKNOWN",
         confidence: 0,
         financialData: [],
@@ -132,6 +159,7 @@ export const analyzeStockWithGemini = async (
 
 export const getMarketPulse = async (stock: Stock): Promise<string> => {
   try {
+    const ai = getAIClient();
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview", 
       contents: `Search for the latest material information, board meeting announcements, and dividend declarations for ${stock.name} (${stock.symbol}) PSX in the last 90 days. Summarize in 3 bullet points.`,
@@ -156,6 +184,6 @@ export const getMarketPulse = async (stock: Stock): Promise<string> => {
 
   } catch (error) {
     console.warn("Search Grounding Error:", error);
-    return "Could not fetch real-time market pulse.";
+    return "Could not fetch real-time market pulse. (Check API Key)";
   }
 };

@@ -1,3 +1,4 @@
+
 export interface Stock {
   symbol: string;
   name: string;
@@ -54,6 +55,7 @@ export interface GroundingChunk {
 export interface UserProfile {
   name: string;
   email: string;
+  apiKey?: string; // User provided API Key
   experience: 'Beginner' | 'Intermediate' | 'Pro';
   riskTolerance: 'Low' | 'Medium' | 'High';
 }
