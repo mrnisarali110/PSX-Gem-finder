@@ -36,6 +36,12 @@ const VerdictCard: React.FC<{
           text: 'text-red-800 dark:text-red-400',
           icon: '❌'
       };
+      case 'UNKNOWN': return {
+          bg: 'bg-gray-50 dark:bg-slate-700/50',
+          border: 'border-gray-200 dark:border-slate-600',
+          text: 'text-gray-500 dark:text-gray-400',
+          icon: '❓'
+      };
       default: return {
           bg: 'bg-slate-50 dark:bg-slate-800',
           border: 'border-slate-200 dark:border-slate-700',
@@ -60,7 +66,7 @@ const VerdictCard: React.FC<{
             </div>
         </div>
 
-        {onSave && (
+        {onSave && result.verdict !== 'UNKNOWN' && (
             <button 
             onClick={onSave}
             disabled={isSaved}
@@ -79,6 +85,45 @@ const VerdictCard: React.FC<{
 };
 
 const AnalysisView: React.FC<AnalysisViewProps> = ({ result, comparisonResult, onSaveToWatchlist, onBack, isSaved }) => {
+  
+  // Handle case where stock is not found
+  if (result.verdict === 'UNKNOWN') {
+    return (
+      <div className="w-full pb-20 animate-slide-up flex flex-col items-center">
+         <div className="mb-6 sticky top-24 z-10 w-full max-w-4xl px-4 md:static">
+            <button 
+                onClick={onBack}
+                className="flex items-center gap-2 text-slate-700 dark:text-slate-300 hover:text-gem-600 dark:hover:text-white transition-colors group bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm p-2 rounded-full md:bg-transparent md:p-0 shadow-sm md:shadow-none border border-slate-200 md:border-none dark:border-slate-700"
+            >
+                <div className="p-2 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 group-hover:border-gem-500 transition-colors shadow-sm">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                </div>
+                <span className="font-bold text-sm">Back to Search</span>
+            </button>
+         </div>
+
+         <div className="max-w-xl w-full text-center p-8 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-gray-200 dark:border-slate-700">
+            <div className="w-20 h-20 bg-gray-100 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-6">
+                <span className="text-4xl">🤔</span>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Stock Not Identified</h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+                We couldn't confidently identify <span className="font-mono font-bold text-gem-600 dark:text-gem-400">{result.companyName}</span> on the PSX.
+            </p>
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg text-left text-sm text-blue-800 dark:text-blue-300 mb-8 border border-blue-100 dark:border-blue-900/30">
+                <strong>Tip:</strong> Try searching for the official symbol or full company name (e.g., "OGDC" instead of "Oil Gas").
+            </div>
+            <button 
+                onClick={onBack}
+                className="bg-gem-600 hover:bg-gem-700 text-white font-bold py-3 px-8 rounded-xl transition-all shadow-lg shadow-gem-500/30"
+            >
+                Try Another Search
+            </button>
+         </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full pb-20 animate-slide-up">
       
@@ -141,9 +186,11 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ result, comparisonResult, o
       </div>
 
       {/* 2. Visuals (Charts) */}
-      <div className="mb-8 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-1 shadow-sm overflow-hidden">
-         <MetricChart data={result} comparisonData={comparisonResult || undefined} />
-      </div>
+      {result.financialData.length > 0 && (
+          <div className="mb-8 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-1 shadow-sm overflow-hidden">
+             <MetricChart data={result} comparisonData={comparisonResult || undefined} />
+          </div>
+      )}
 
       {/* 3. Detailed Report */}
       <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 md:p-8 shadow-sm">

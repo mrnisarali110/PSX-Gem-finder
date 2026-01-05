@@ -5,6 +5,7 @@ import WatchlistView from './components/WatchlistView';
 import LoadingOverlay from './components/LoadingOverlay';
 import RecentSearches from './components/RecentSearches';
 import ProfileModal from './components/ProfileModal';
+import LandingSection from './components/LandingSection';
 import { Logo } from './components/Logo';
 import { Stock, AnalysisResult, AnalysisStatus, WatchlistItem, RecentSearch, UserProfile } from './types';
 import { analyzeStockWithGemini, getMarketPulse } from './services/geminiService';
@@ -39,15 +40,15 @@ const App: React.FC = () => {
   const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
 
   // Simple Beep Sound
-  const playNotification = () => {
+  const playNotification = (isError = false) => {
     try {
         const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
         const oscillator = audioContext.createOscillator();
         const gainNode = audioContext.createGain();
         oscillator.connect(gainNode);
         gainNode.connect(audioContext.destination);
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
+        oscillator.type = isError ? 'sawtooth' : 'sine';
+        oscillator.frequency.setValueAtTime(isError ? 150 : 880, audioContext.currentTime);
         gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
         gainNode.gain.exponentialRampToValueAtTime(0.00001, audioContext.currentTime + 0.5);
         oscillator.start();
@@ -93,13 +94,6 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('gem_finder_profile', JSON.stringify(userProfile));
   }, [userProfile]);
-
-  useEffect(() => {
-    if (status === AnalysisStatus.COMPLETED) {
-        playNotification();
-        setView('result'); 
-    }
-  }, [status]);
 
   // --- Handlers ---
 
@@ -154,12 +148,22 @@ const App: React.FC = () => {
 
       const responses = await Promise.all(promises);
 
+      const mainResult = responses[0] as AnalysisResult;
+      
       setResult({
-          ...responses[0] as AnalysisResult,
+          ...mainResult,
           searchInsights: responses[1] as string,
           companyName: selectedStock.symbol
       });
-      addToHistory(selectedStock);
+      
+      // Only add to history if it's a valid stock
+      if (mainResult.verdict !== 'UNKNOWN') {
+          addToHistory(selectedStock);
+          playNotification(false);
+      } else {
+          // Play a lower tone for not found
+          playNotification(true); 
+      }
 
       if (isComparisonMode && comparisonStock) {
         setComparisonResult({
@@ -171,6 +175,8 @@ const App: React.FC = () => {
       }
 
       setStatus(AnalysisStatus.COMPLETED);
+      setView('result');
+
     } catch (error) {
       console.error(error);
       setStatus(AnalysisStatus.ERROR);
@@ -249,7 +255,8 @@ const App: React.FC = () => {
       {status === AnalysisStatus.ANALYZING && !isMinimized && (
         <LoadingOverlay 
           stockSymbol={isComparisonMode ? `${selectedStock?.symbol} & ${comparisonStock?.symbol}` : selectedStock?.symbol || ''} 
-          onMinimize={() => { setIsMinimized(true); setView('search'); }} 
+          onMinimize={() => { setIsMinimized(true); setView('search'); }}
+          isCustomSearch={selectedStock?.price === 0} 
         />
       )}
 
@@ -333,20 +340,11 @@ const App: React.FC = () => {
 
           {view === 'search' && (
              <div className="w-full max-w-5xl animate-fade-in flex flex-col items-center pb-20">
-                    
-                {/* Hero Text */}
-                <div className="text-center mb-8 max-w-2xl px-4 mt-4">
-                    <h2 className="text-3xl md:text-5xl font-serif font-bold text-gray-900 dark:text-white mb-4 leading-tight">
-                        Intelligent PSX Analysis
-                    </h2>
-                    <p className="text-gray-600 dark:text-gray-400 text-base md:text-lg font-medium leading-relaxed">
-                        {isComparisonMode 
-                        ? "Compare securities head-to-head. AI evaluates sector risks, valuation gaps, and IFRS fundamentals." 
-                        : "Select a sector below to identify undervalued opportunities using real-time financial data."}
-                    </p>
-                </div>
+                
+                {/* Brand New Landing/About Section */}
+                <LandingSection />
 
-                {/* Control Card */}
+                {/* Control Card (Search) */}
                 <div className="w-full bg-white dark:bg-slate-800 p-6 md:p-8 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-xl shadow-slate-200/50 dark:shadow-black/30 relative overflow-hidden transition-all duration-300">
                     
                     <div className="flex justify-end mb-4">

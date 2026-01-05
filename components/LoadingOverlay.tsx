@@ -3,11 +3,24 @@ import React, { useState, useEffect } from 'react';
 interface LoadingOverlayProps {
   stockSymbol: string;
   onMinimize: () => void;
+  isCustomSearch?: boolean;
 }
 
-const LoadingOverlay: React.FC<LoadingOverlayProps> = ({ stockSymbol, onMinimize }) => {
+const LoadingOverlay: React.FC<LoadingOverlayProps> = ({ stockSymbol, onMinimize, isCustomSearch = false }) => {
   const [timeLeft, setTimeLeft] = useState(15);
   const [progress, setProgress] = useState(0);
+  const [currentStep, setCurrentStep] = useState(0);
+
+  // Dynamic steps based on search type
+  const steps = isCustomSearch ? [
+      "Verifying Symbol in PSX Database...",
+      "Identifying Official Ticker...",
+      "Searching for Financial Reports..."
+  ] : [
+      "Retrieving Annual Reports (2020-2024)...",
+      "Calculating Intrinsic Value & EPS...",
+      "Assessing Sector Risk & Pulse..."
+  ];
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -23,7 +36,14 @@ const LoadingOverlay: React.FC<LoadingOverlayProps> = ({ stockSymbol, onMinimize
     const progressTimer = setInterval(() => {
        setProgress((prev) => {
          if (prev >= 95) return prev;
-         return prev + (100 / 150); // Rough increment for 15s
+         const newProgress = prev + (100 / 150); // Rough increment for 15s
+         
+         // Update step based on progress
+         if (newProgress > 70) setCurrentStep(2);
+         else if (newProgress > 30) setCurrentStep(1);
+         else setCurrentStep(0);
+
+         return newProgress;
        })
     }, 100);
 
@@ -31,7 +51,7 @@ const LoadingOverlay: React.FC<LoadingOverlayProps> = ({ stockSymbol, onMinimize
       clearInterval(timer);
       clearInterval(progressTimer);
     };
-  }, []);
+  }, [isCustomSearch]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-50/95 dark:bg-slate-900/95 backdrop-blur-md animate-fade-in">
@@ -57,15 +77,17 @@ const LoadingOverlay: React.FC<LoadingOverlayProps> = ({ stockSymbol, onMinimize
                style={{ animationDuration: '1s' }}
              ></div>
              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-3xl animate-pulse">💎</span>
+                <span className="text-3xl animate-pulse">
+                    {isCustomSearch ? '🔍' : '💎'}
+                </span>
              </div>
           </div>
 
           <h3 className="text-xl font-serif font-bold text-gray-900 dark:text-white mb-2">
-             Analyzing {stockSymbol}
+             {isCustomSearch ? `Searching for "${stockSymbol}"` : `Analyzing ${stockSymbol}`}
           </h3>
           <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">
-            Retrieving live market data and financial statements.
+            {isCustomSearch ? " verifying existence and fetching live data..." : "Retrieving live market data and financial statements."}
           </p>
 
           {/* Progress Bar */}
@@ -83,15 +105,14 @@ const LoadingOverlay: React.FC<LoadingOverlayProps> = ({ stockSymbol, onMinimize
 
           {/* Steps */}
           <div className="mt-8 space-y-3 w-full text-left bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm border border-gray-100 dark:border-slate-700">
-              <div className={`flex items-center gap-3 text-xs font-medium ${progress > 10 ? 'text-gem-600 dark:text-gem-400' : 'text-gray-400'}`}>
-                <span className="">{progress > 10 ? '✓' : '•'}</span> Retrieving Annual Reports (2020-2024)
-              </div>
-              <div className={`flex items-center gap-3 text-xs font-medium ${progress > 40 ? 'text-gem-600 dark:text-gem-400' : 'text-gray-400'}`}>
-                <span className="">{progress > 40 ? '✓' : '•'}</span> Calculating Intrinsic Value & EPS
-              </div>
-              <div className={`flex items-center gap-3 text-xs font-medium ${progress > 70 ? 'text-gem-600 dark:text-gem-400' : 'text-gray-400'}`}>
-                <span className="">{progress > 70 ? '✓' : '•'}</span> Assessing Sector Risk & Pulse
-              </div>
+              {steps.map((step, index) => (
+                  <div key={index} className={`flex items-center gap-3 text-xs font-medium transition-colors duration-300 ${index <= currentStep ? 'text-gem-600 dark:text-gem-400' : 'text-gray-400'}`}>
+                    <span className="">
+                        {index < currentStep ? '✓' : (index === currentStep ? '•••' : '○')}
+                    </span> 
+                    {step}
+                  </div>
+              ))}
           </div>
         </div>
       </div>

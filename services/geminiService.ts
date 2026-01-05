@@ -10,21 +10,39 @@ export const analyzeStockWithGemini = async (
 ): Promise<AnalysisResult> => {
   try {
     const today = new Date().toISOString().split('T')[0];
+    
+    // Handle Custom Search where price might be 0
+    // We add a specific instruction for "Identification"
+    const isCustomSearch = stock.price === 0;
+    const priceContext = !isCustomSearch
+      ? `Current Price (Ref): PKR ${stock.price}` 
+      : `Current Price: UNKNOWN. Task: Find the live price.`;
+
     const prompt = `
     **LIVE ANALYSIS REQUEST**
     Date: ${today}
-    Target Security: ${stock.symbol} (${stock.name}) - Sector: ${stock.sector}
-    Current Price (Ref): PKR ${stock.price}
+    Input Symbol/Name: ${stock.symbol}
+    ${priceContext}
     
     **MANDATORY ACTIONS:**
-    1.  **LIVE SEARCH**: Use Google Search to find the *very latest* financial results (Quarterly or Annual) for 2024/2025. Do NOT rely on training data.
-    2.  **VERIFY DATE**: Explicitly mention the date of the latest financial report found in the output.
-    3.  **EXTRACT**: Get EPS, Revenue, and Dividend data for the last 5 years up to present day.
-    4.  **ANALYZE**: Apply the "Gem" methodology defined in system instructions.
+    1.  **STRICT IDENTIFICATION**: 
+        - The user input "${stock.symbol}" might be a typo, a short name, or garbage text. 
+        - **Verify** if this corresponds to a listed company on the Pakistan Stock Exchange (PSX).
+        - **FAIL FAST**: If the input is random text (e.g. "asdasd", "wafi"), nonsense, or NOT a real PSX company, **IMMEDIATELY** set verdict to 'UNKNOWN' and stop. Do NOT generate fake financial data.
+        - If it is a valid company (e.g. "LUCK", "Meezan"), proceed to step 2.
+
+    2.  **LIVE DATA SEARCH** (Only if Identified): 
+        - Use Google Search to find the *latest* Financial Results (2024-2025) and Stock Price.
     
-    **IMPORTANT**: Keep the "markdownReport" concise and focused on key insights to ensure valid JSON output.
+    3.  **VALUATION** (Only if Identified): 
+        - Apply the "Gem" methodology defined in system instructions.
     
-    Output must be valid JSON matching the provided schema.
+    **OUTPUT REQUIREMENTS**:
+    - If the stock is valid, return "verdict" as GEM, WATCH, or TRAP.
+    - If the stock is NOT found on PSX, return "verdict" as UNKNOWN.
+    - **Identify the Company**: Always return the correct "officialSymbol" and "officialName" in the JSON.
+
+    Output must be valid JSON.
     `;
 
     const response = await ai.models.generateContent({
@@ -35,10 +53,8 @@ export const analyzeStockWithGemini = async (
       config: {
         systemInstruction: GEM_SYSTEM_INSTRUCTION,
         tools: [{ googleSearch: {} }],
-        // Explicitly set a high output limit to prevent JSON truncation
         maxOutputTokens: 65536,
         thinkingConfig: {
-          // Reduce budget slightly to leave ample room for the generation
           thinkingBudget: 10000, 
         },
         responseMimeType: "application/json",
@@ -47,6 +63,8 @@ export const analyzeStockWithGemini = async (
           properties: {
             verdict: { type: Type.STRING, enum: ["GEM", "WATCH", "TRAP", "UNKNOWN"] },
             confidence: { type: Type.NUMBER, description: "Confidence score 0-100" },
+            officialName: { type: Type.STRING, description: "The full official company name (e.g. 'Waves Corporation Limited')" },
+            officialSymbol: { type: Type.STRING, description: "The correct ticker symbol (e.g. 'WAVES')" },
             markdownReport: { type: Type.STRING, description: "The detailed markdown analysis report." },
             financialData: {
               type: Type.ARRAY,
@@ -72,17 +90,13 @@ export const analyzeStockWithGemini = async (
       jsonResponse = JSON.parse(response.text || "{}");
     } catch (parseError) {
       console.warn("Initial JSON parse failed, attempting cleanup:", parseError);
-      // Attempt to clean markdown code blocks if present
       const cleanedText = response.text?.replace(/```json\n?|```/g, '').trim() || "{}";
       try {
         jsonResponse = JSON.parse(cleanedText);
       } catch (finalError) {
         console.error("Gemini Analysis JSON Parse Error:", finalError);
-        console.log("Raw Text:", response.text);
-        
-        // Return a graceful failure object instead of crashing
         return {
-           markdown: "### Analysis Error\n\nThe AI successfully analyzed the data but the response format was incomplete (Token Limit Exceeded). \n\n**Please try analyzing the stock again.**",
+           markdown: "### Analysis Error\n\nThe AI successfully analyzed the data but the response format was incomplete. \n\n**Please try analyzing the stock again.**",
            verdict: "UNKNOWN",
            confidence: 0,
            financialData: [],
@@ -91,17 +105,21 @@ export const analyzeStockWithGemini = async (
       }
     }
 
+    // Use the official name found by AI if available
+    const resolvedName = jsonResponse.officialName 
+        ? `${jsonResponse.officialSymbol || stock.symbol} - ${jsonResponse.officialName}`
+        : stock.symbol;
+
     return {
       markdown: jsonResponse.markdownReport || "Analysis failed to generate text.",
       verdict: jsonResponse.verdict || "UNKNOWN",
       confidence: jsonResponse.confidence || 0,
       financialData: jsonResponse.financialData || [],
-      companyName: stock.symbol
+      companyName: resolvedName
     };
 
   } catch (error) {
     console.error("Gemini Analysis Error:", error);
-    // Return a structured error result so the UI handles it gracefully
     return {
         markdown: "### Connection or API Error\n\nUnable to complete analysis at this time. Please check your internet connection or API quota.",
         verdict: "UNKNOWN",
