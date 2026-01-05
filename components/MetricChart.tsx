@@ -8,9 +8,6 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
-  defs,
-  linearGradient,
-  stop
 } from 'recharts';
 import { AnalysisResult } from '../types';
 
