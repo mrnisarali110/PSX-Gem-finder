@@ -1,0 +1,5 @@
+{
+  "name": "PSX Gem Finder",
+  "description": "Automated Value Investing Tool for the Pakistan Stock Exchange using Gemini AI to identify undervalued 'Gems' in financial reports.",
+  "requestFramePermissions": []
+}
